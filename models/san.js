@@ -2,13 +2,14 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const schema = new Schema({
-	token: {
-		type: String,
+	points: {
+		type: Number,
 		required: true
 	},
-	meta: []
+	user: { type: Schema.ObjectId, ref: 'User' },
+	payload: {}
 }, {
 	timestamps: true
 });
 
-module.exports = mongoose.model('User', schema);
+module.exports = mongoose.model('SAN', schema);
