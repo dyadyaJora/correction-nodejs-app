@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+var cors = require('cors')
 const app = express();
 const User = require('./models/user');
 const SAN = require('./models/san');
@@ -16,6 +17,8 @@ passportController(passport);
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+app.use(cors());
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
