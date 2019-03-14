@@ -60,7 +60,7 @@ app.get('/test-auth', passport.authenticate('jwt', { session: false }), (req, re
 
 app.post('/san', passport.authenticate('jwt', { session: false }), async (req, res) => {
   let payload = req.body.sanData;
-
+  console.log(req.body)
   if (!payload) {
     res.send(404);
     return;
@@ -71,7 +71,7 @@ app.post('/san', passport.authenticate('jwt', { session: false }), async (req, r
 
   try {
     await SAN.create({
-      points: val,
+      points: val.diff,
       payload: payload,
       user: userId
     });
