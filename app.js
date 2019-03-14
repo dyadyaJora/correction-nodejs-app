@@ -56,8 +56,8 @@ app.get('/auth', async (req, res) => {
   }
 });
 
-app.get('/test-auth', passport.authenticate('jwt', { session: false }), (req, res) => {
-  res.send('okay');
+app.get('/check-auth', passport.authenticate('jwt', { session: false }), (req, res) => {
+  res.send({ valid: true });
 });
 
 app.post('/san', passport.authenticate('jwt', { session: false }), async (req, res) => {
