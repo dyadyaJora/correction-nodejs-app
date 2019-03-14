@@ -6,9 +6,11 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const User = require('./models/user');
 const SAN = require('./models/san');
+const Lusher = require('./models/lusher');
 const passportController = require('./passport');
 const config = require('./config');
 const psySan = require('./lib/psy_san');
+const psyLusher = require('./lib/psy_lusher');
 
 passportController(passport);
 
@@ -76,11 +78,53 @@ app.post('/san', passport.authenticate('jwt', { session: false }), async (req, r
       user: userId
     });
   } catch (err) {
-    res.send(500);
+    res.sendStatus(500);
     return;
   }
 
   res.send({ message: 'ok' });
+});
+
+app.post('/lusher', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  let oneArr = req.body.data.oneArr;
+  let twoArr = req.body.data.twoArr;
+
+  if (!oneArr || !oneArr.length || !twoArr || !twoArr.length) {
+    res.sendStatus(400);
+    return;
+  }
+
+  if (oneArr.length !== twoArr.length) {
+    res.send(400, 'Wrong arrays length');
+  }
+
+  let anxObject = psyLusher.calcAnxiety(oneArr, twoArr);
+  let confObject = psyLusher.calcConflict(oneArr, twoArr);
+  let perfObject = psyLusher.calcPerformance(oneArr, twoArr);
+  let fagObject = psyLusher.calcFatigue(oneArr, twoArr);
+
+  let userId = req.user.id;
+
+  try {
+    await Lusher.create({
+      points: {
+        anxiety: anxObject,
+        conflict: confObject,
+        performance: perfObject,
+        fatigue: fagObject
+      },
+      arrays: {
+        one: oneArr,
+        two: twoArr
+      },
+      user: userId
+    });
+  } catch (err) {
+    res.sendStatus(500);
+    console.log(err);
+  }
+
+  res.send({ message: "ok" });
 });
 
 app.post('/meta', passport.authenticate('jwt', { session: false }), async (req, res) => {
@@ -96,7 +140,7 @@ app.post('/meta', passport.authenticate('jwt', { session: false }), async (req, 
     });
   } catch (err) {
     console.log(err);
-    res.send(500);
+    res.sendStatus(500);
     return;
   }
 
