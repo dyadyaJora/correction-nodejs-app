@@ -65,6 +65,7 @@ app.get('/check-auth', passport.authenticate('jwt', { session: false }), (req, r
 
 app.post('/san', passport.authenticate('jwt', { session: false }), async (req, res) => {
   let payload = req.body.sanData;
+  let doc;
   console.log(req.body)
   if (!payload) {
     res.send(404);
@@ -75,7 +76,7 @@ app.post('/san', passport.authenticate('jwt', { session: false }), async (req, r
   let userId = req.user.id;
 
   try {
-    await SAN.create({
+    doc = await SAN.create({
       points: val.diff,
       payload: payload,
       user: userId
@@ -85,12 +86,17 @@ app.post('/san', passport.authenticate('jwt', { session: false }), async (req, r
     return;
   }
 
-  res.send({ message: 'ok' });
+  res.send({
+    message: 'ok', data: {
+      id: doc._id
+    }
+  });
 });
 
 app.post('/lusher', passport.authenticate('jwt', { session: false }), async (req, res) => {
   let oneArr = req.body.data.oneArr;
   let twoArr = req.body.data.twoArr;
+  let doc;
 
   if (!oneArr || !oneArr.length || !twoArr || !twoArr.length) {
     res.sendStatus(400);
@@ -109,7 +115,7 @@ app.post('/lusher', passport.authenticate('jwt', { session: false }), async (req
   let userId = req.user.id;
 
   try {
-    await Lusher.create({
+    doc = await Lusher.create({
       points: {
         anxiety: anxObject,
         conflict: confObject,
@@ -127,7 +133,12 @@ app.post('/lusher', passport.authenticate('jwt', { session: false }), async (req
     console.log(err);
   }
 
-  res.send({ message: "ok" });
+  res.send({
+    message: 'ok',
+    data: {
+      id: doc._id
+    }
+  });
 });
 
 app.post('/meta', passport.authenticate('jwt', { session: false }), async (req, res) => {
@@ -146,6 +157,39 @@ app.post('/meta', passport.authenticate('jwt', { session: false }), async (req, 
     res.sendStatus(500);
     return;
   }
+
+  res.send({ message: 'ok' });
+});
+
+app.post('/meta/:type', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  let userId = req.user.id;
+  let meta = req.body.meta;
+  let id = req.body.id;
+
+  //meta.timestamp = (new Date()).toISOString();
+  try {
+    switch(req.params.type) {
+      case 'lusher': {
+        await Lusher.findByIdAndUpdate(id, {
+          meta: meta
+        });
+        break;
+      }
+      case 'san': {
+        await SAN.findByIdAndUpdate(id, {
+          meta: meta
+        });
+        break;
+      }
+      case 'variability': {
+        break;
+      }
+    };
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+
 
   res.send({ message: 'ok' });
 });

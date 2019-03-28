@@ -8,7 +8,8 @@ const schema = new Schema({
     n: Number
   },
   user: { type: Schema.ObjectId, ref: 'User', required: true },
-  payload: {}
+  payload: {},
+  meta: {}
 }, {
   timestamps: true
 });

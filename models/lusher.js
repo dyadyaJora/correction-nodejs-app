@@ -25,6 +25,7 @@ const schema = new Schema({
     two: Array
   },
   user: { type: Schema.ObjectId, ref: 'User', required: true },
+  meta: {}
 }, {
   timestamps: true
 });
