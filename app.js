@@ -8,6 +8,7 @@ const app = express();
 const User = require('./models/user');
 const SAN = require('./models/san');
 const Lusher = require('./models/lusher');
+const Variability = require('./models/variability');
 const passportController = require('./passport');
 const config = require('./config');
 const psySan = require('./lib/psy_san');
@@ -66,7 +67,7 @@ app.get('/check-auth', passport.authenticate('jwt', { session: false }), (req, r
 app.post('/san', passport.authenticate('jwt', { session: false }), async (req, res) => {
   let payload = req.body.sanData;
   let doc;
-  console.log(req.body)
+
   if (!payload) {
     res.send(404);
     return;
@@ -141,6 +142,34 @@ app.post('/lusher', passport.authenticate('jwt', { session: false }), async (req
   });
 });
 
+app.post('/variability', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  let payload = req.body.payload;
+  let doc;
+
+  if (!payload) {
+    res.send(404);
+    return;
+  }
+
+  let userId = req.user.id;
+
+  try {
+    doc = await Variability.create({
+      payload: payload,
+      user: userId
+    });
+  } catch (err) {
+    res.sendStatus(500);
+    return;
+  }
+
+  res.send({
+    message: 'ok', data: {
+      id: doc._id
+    }
+  });
+});
+
 app.post('/meta', passport.authenticate('jwt', { session: false }), async (req, res) => {
   let userId = req.user.id;
   let meta = req.body.meta;
@@ -182,6 +211,9 @@ app.post('/meta/:type', passport.authenticate('jwt', { session: false }), async 
         break;
       }
       case 'variability': {
+        await Variability.findByIdAndUpdate(id, {
+          meta: meta
+        });
         break;
       }
     };
