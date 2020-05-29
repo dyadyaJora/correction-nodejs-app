@@ -11,7 +11,12 @@ function open() {
       .on('close', () => console.log('Database connection closed'))
       .once('open', () => resolve(mongoose.connections[0]));
 
-    mongoose.connect(config.MONGO_URL, { useNewUrlParser: true });
+    mongoose.connect(config.MONGO_URL, {
+      useNewUrlParser: true,
+      useCreateIndex: true,
+      useUnifiedTopology: true,
+      useFindAndModify: false
+    });
   });
 }
 

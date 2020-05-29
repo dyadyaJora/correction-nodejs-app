@@ -13,6 +13,9 @@ const passportController = require('./passport');
 const config = require('./config');
 const psySan = require('./lib/psy_san');
 const psyLusher = require('./lib/psy_lusher');
+const sessionService = require('./controllers/session-service');
+const Memcached = require('memcached');
+const memcached = new Memcached(config.MEMCACHED_HOST + ':' + config.MEMCACHED_PORT);
 
 passportController(passport);
 
@@ -226,8 +229,57 @@ app.post('/meta/:type', passport.authenticate('jwt', { session: false }), async 
   res.send({ message: 'ok' });
 });
 
+app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
+  creatingDeviceSessionWrapper(req, res, () => {
+    res.sendStatus(200);
+  });
+});
+
+app.get('/api/v1/device/:deviceId/session/:sessionId/create', function(req, res) {
+  creatingDeviceSessionWrapper(req, res, (session) => {
+    res.redirect("/#/devices?sessionId=" + session._id);
+  });
+});
+
 function generateRandomToken() {
   return  crypto.randomBytes(32).toString('hex');
+}
+
+function creatingDeviceSessionWrapper(req, res, done) {
+  let deviceId = req.params.deviceId;
+  let sessionId = req.params.sessionId;
+
+  sessionService.getOrCreateDevice(sessionId, deviceId)
+      .then(data => {
+        if (!data.session || !data.device) {
+          res.sendStatus(403);
+          return;
+        }
+
+        return new Promise((resolve, reject) => {
+          data.session.client = data.device;
+          let key = data.session.hash;
+          let value = data.session;
+          memcached.set(key, value, 0, (err) => {
+            if (!!err) {
+              reject(err);
+              return;
+            }
+
+            resolve(data.session);
+          })
+        });
+      })
+      .then((session) => {
+        console.log("I'M OK!");
+        done(session);
+      })
+      .catch((err) => {
+        console.error(err);
+        res.send(503);
+      });
+
+  console.log("api GET device/session called with params " + deviceId + " " + sessionId);
 }
 
 module.exports = app;
