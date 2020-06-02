@@ -10,6 +10,14 @@ const schema = new mongoose.Schema({
   type: {
     type: String,
     default: ''
+  },
+  name: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true

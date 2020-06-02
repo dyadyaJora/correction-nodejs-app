@@ -14,6 +14,7 @@ const config = require('./config');
 const psySan = require('./lib/psy_san');
 const psyLusher = require('./lib/psy_lusher');
 const sessionService = require('./controllers/session-service');
+const correctionService = require('./controllers/correction-service');
 const Memcached = require('memcached');
 const memcached = new Memcached(config.MEMCACHED_HOST + ':' + config.MEMCACHED_PORT);
 
@@ -237,8 +238,108 @@ app.get('/api/v1/device/:deviceId/session/:sessionId', function(req, res) {
 
 app.get('/api/v1/device/:deviceId/session/:sessionId/create', function(req, res) {
   creatingDeviceSessionWrapper(req, res, (session) => {
-    res.redirect("/#/devices?sessionId=" + session._id);
+    res.redirect("http://localhost:8100/#/devices?sessionId=" + session._id);
   });
+});
+
+app.get("/cached/:deviceId/:sessionId", (req, res) => {
+  let deviceId = req.params.deviceId;
+  let sessionId = req.params.sessionId;
+
+  memcached.touch(sessionId, 10000, function (err) {
+    if (!!err) {
+      console.log(err);
+      return;
+    }
+
+    memcached.get(sessionId, function (err, data) {
+      console.log(data);
+      res.send(data);
+    });
+  });
+});
+
+app.put('/api/v1/session/:_id/sync', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user._id;
+  let _id = req.params._id;
+
+  sessionService.syncSessionUser(_id, userId)
+      .then(data => {
+        console.log('sync data === ', data);
+        res.sendStatus(204);
+      })
+      .catch(err => {
+        console.error("error syncing user session", err);
+        res.sendStatus(500);
+      })
+});
+
+app.get('/devices', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user.id;
+
+  sessionService.getDevicesByUser(userId)
+      .then(devices => {
+        res.send(devices);
+      })
+      .catch(err => {
+        console.error(err);
+        res.sendStatus(500);
+      })
+});
+
+app.get('/devices/:deviceHash', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user.id;
+  let deviceHash = req.params.deviceHash;
+
+  sessionService.getDevicesByUser(userId)
+      .then(devices => {
+        res.send(devices);
+      })
+      .catch(err => {
+        console.error(err);
+        res.sendStatus(500);
+      })
+});
+
+app.get('/sessions/:sessionHash', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user.id;
+  let sessionHash = req.params.sessionHash;
+
+  sessionService.getSession(sessionHash, userId)
+      .then(devices => {
+        res.send(devices);
+      })
+      .catch(err => {
+        console.error(err);
+        res.sendStatus(500);
+      })
+});
+
+app.get('/corrections', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user.id;
+  correctionService.getCorrectionsByUser(userId)
+      .then(corrections => {
+        res.send(corrections);
+      })
+      .catch(err => {
+        console.error(err);
+        res.sendStatus(500);
+      });
+});
+
+app.post('/corrections', passport.authenticate('jwt', { session: false }), (req, res) => {
+  let userId = req.user.id;
+  let type = req.body.type;
+  let info = req.body.info;
+
+  correctionService.createCorrectionByUser(userId, type, info)
+      .then(correction => {
+        res.send(correction);
+      })
+      .catch(err => {
+        console.error(err);
+        res.sendStatus(500);
+      });
 });
 
 function generateRandomToken() {
@@ -249,7 +350,7 @@ function creatingDeviceSessionWrapper(req, res, done) {
   let deviceId = req.params.deviceId;
   let sessionId = req.params.sessionId;
 
-  sessionService.getOrCreateDevice(sessionId, deviceId)
+  sessionService.getOrCreateBciDevice(sessionId, deviceId)
       .then(data => {
         if (!data.session || !data.device) {
           res.sendStatus(403);
